@@ -3,8 +3,8 @@ pipeline {
 
     environment {
         // AWS credentials stored in Jenkins as Secret Text
-        AWS_ACCESS_KEY_ID     = credentials('AWS_ACCESS_KEY_ID')
-        AWS_SECRET_ACCESS_KEY = credentials('AWS_SECRET_ACCESS_KEY')
+        // Avoid using Groovy interpolation directly
+        AWS_CREDENTIALS = credentials('AWS_CREDENTIALS_ID') // Use a single AWS credential binding
     }
 
     stages {
@@ -29,10 +29,7 @@ pipeline {
         stage('Terraform Init & Plan') {
             steps {
                 dir('terraform-infra') {
-                    withEnv([
-                        "AWS_ACCESS_KEY_ID=${AWS_ACCESS_KEY_ID}",
-                        "AWS_SECRET_ACCESS_KEY=${AWS_SECRET_ACCESS_KEY}"
-                    ]) {
+                    withCredentials([[$class: 'AmazonWebServicesCredentialsBinding', credentialsId: 'AWS_CREDENTIALS_ID']]) {
                         sh '''
                             set -e
                             terraform init -input=false
@@ -46,10 +43,7 @@ pipeline {
         stage('Terraform Apply') {
             steps {
                 dir('terraform-infra') {
-                    withEnv([
-                        "AWS_ACCESS_KEY_ID=${AWS_ACCESS_KEY_ID}",
-                        "AWS_SECRET_ACCESS_KEY=${AWS_SECRET_ACCESS_KEY}"
-                    ]) {
+                    withCredentials([[$class: 'AmazonWebServicesCredentialsBinding', credentialsId: 'AWS_CREDENTIALS_ID']]) {
                         sh '''
                             set -e
                             terraform apply -input=false -auto-approve tfplan
@@ -62,8 +56,8 @@ pipeline {
         stage('Prepare Ansible Inventory') {
             steps {
                 script {
-                    // Capture the Terraform output (public IP)
-                    def ip = sh(script: "cd terraform-infra && terraform output -raw instance_ip", returnStdout: true).trim()
+                    // Ensure the Terraform output file exists
+                    def ip = sh(script: "terraform -chdir=terraform-infra output -raw instance_ip", returnStdout: true).trim()
                     writeFile file: 'ansible/inventory.ini', text: "[app]\n${ip} ansible_user=ec2-user ansible_ssh_private_key_file=ansible/jenkins_key.pem"
                     echo "Inventory created with IP: ${ip}"
                 }
