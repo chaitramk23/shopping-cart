@@ -63,6 +63,24 @@ pipeline {
                 }
             }
         }
+        stage('Ansible Deploy') {
+            steps {
+                dir('ansible') {
+                   sh '''
+                       set -e
+
+                       echo "[INFO] Preparing SSH key for Ansible..."
+                       # Make a temporary copy owned by Jenkins
+                       cp jenkins_key.pem /tmp/jenkins_key.pem
+                       chmod 400 /tmp/jenkins_key.pem
+
+                       echo "[INFO] Running Ansible playbook..."
+                       export ANSIBLE_HOST_KEY_CHECKING=False
+                       ansible-playbook -i inventory.ini playbook.yml --private-key=/tmp/jenkins_key.pem
+                       '''
+                    }
+                 }
+              }
 
         stage('Ansible Deploy') {
             steps {
