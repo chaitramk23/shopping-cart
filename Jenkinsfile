@@ -69,7 +69,7 @@ pipeline {
                 dir('ansible') {
                     sh '''
                         set -e
-                        ansible-playbook -i inventory.ini playbook.yml
+                        ansible-playbook -i inventory.ini playbook.yml --ssh-extra-args="-o StrictHostKeyChecking=no"
                     '''
                 }
             }
