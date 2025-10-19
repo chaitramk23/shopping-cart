@@ -70,11 +70,15 @@ stages {
                 sh '''
                     set -e
                     echo "[INFO] Preparing SSH key for Ansible..."
-                    cp jenkins_key.pem ./jenkins_key.pem
-                    chmod 400 ./jenkins_key.pem
+                    cp jenkins_key.pem ./jenkins_key_temp.pem
+                    chmod 400 ./jenkins_key_temp.pem
+
                     echo "[INFO] Running Ansible playbook..."
                     export ANSIBLE_HOST_KEY_CHECKING=False
-                    ansible-playbook -i inventory.ini playbook.yml --private-key=jenkins_key.pem
+                    ansible-playbook -i inventory.ini playbook.yml --private-key=./jenkins_key_temp.pem
+
+                    echo "[INFO] Cleaning up temporary key..."
+                    rm -f ./jenkins_key_temp.pem
                 '''
             }
         }
