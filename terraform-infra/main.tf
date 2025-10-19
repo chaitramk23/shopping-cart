@@ -9,7 +9,7 @@ variable "key_name" {
 
 # Use existing security group
 variable "sg_id" {
-  default = "tomcat-sg"  # replace with your existing SG ID
+  default = "sg-0dd5166fbf1ff8a90"  # replace with your existing SG ID
 }
 
 # Get the latest Amazon Linux 2 AMI
