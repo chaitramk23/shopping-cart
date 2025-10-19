@@ -69,7 +69,10 @@ pipeline {
                 dir('ansible') {
                     sh '''
                         set -e
-                        ansible-playbook -i inventory.ini playbook.yml --ssh-extra-args="-o StrictHostKeyChecking=no"
+                         ls -l jenkins_key.pem
+                         chmod 400 jenkins_key.pem
+                         export ANSIBLE_HOST_KEY_CHECKING=False
+                         ansible-playbook -i inventory.ini playbook.yml --private-key=jenkins_key.pem
                     '''
                 }
             }
