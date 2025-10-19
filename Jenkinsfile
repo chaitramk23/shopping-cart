@@ -60,7 +60,7 @@ stages {
                  // Capture the Terraform output (public IP)
                 def ip = sh(script: "cd terraform-infra && terraform output -raw instance_ip", returnStdout: true).trim()
                 writeFile file: 'ansible/inventory.ini', text: "[app]\n${ip} ansible_user=ec2-user"
-                echo "Inventory created with IP: ${ip}
+                echo "Inventory created with IP: ${ip}" 
             }
         }
     }
