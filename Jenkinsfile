@@ -72,7 +72,7 @@ stages {
                      set -e
                        echo "[INFO] Running Ansible playbook..."
                        export ANSIBLE_HOST_KEY_CHECKING=False
-                       ansible-playbook -i inventory.ini playbook.yml
+                       ansible-playbook -i inventory.ini playbook.yml --private-key=/var/lib/jenkins/.ssh/jenkins_key.pem
                 '''
             }
         }
