@@ -1,0 +1,116 @@
+---
+- name: Install and configure Apache Tomcat 9.0.65 on Amazon Linux
+  hosts: app
+  become: yes
+  vars:
+    tomcat_version: "9.0.65"
+    tomcat_install_dir: "/opt"
+    tomcat_user: "admin"
+    tomcat_password: "admin1234"
+
+  tasks:
+    # 1. Update packages
+    - name: Update all packages
+      yum:
+        name: "*"
+        state: latest
+
+    # 2. Install Java 17
+    - name: Install Java 17
+      yum:
+        name: java-17-amazon-corretto
+        state: present
+
+    # 3. Remove old Tomcat versions if present
+    - name: Remove old Tomcat directories
+      file:
+        path: "{{ tomcat_install_dir }}/apache-tomcat-*"
+        state: absent
+      ignore_errors: yes
+
+    # 4. Download Tomcat 9.0.65
+    - name: Download Tomcat 9.0.65
+      get_url:
+        url: "https://archive.apache.org/dist/tomcat/tomcat-9/v{{ tomcat_version }}/bin/apache-tomcat-{{ tomcat_version }}.tar.gz"
+        dest: "/tmp/apache-tomcat-{{ tomcat_version }}.tar.gz"
+
+    # 5. Extract Tomcat archive
+    - name: Extract Tomcat
+      unarchive:
+        src: "/tmp/apache-tomcat-{{ tomcat_version }}.tar.gz"
+        dest: "{{ tomcat_install_dir }}"
+        remote_src: yes
+
+    # 6. Set permissions
+    - name: Set Tomcat directory permissions
+      file:
+        path: "{{ tomcat_install_dir }}/apache-tomcat-{{ tomcat_version }}"
+        owner: ec2-user
+        group: ec2-user
+        recurse: yes
+
+    # 7. Configure tomcat-users.xml
+    - name: Configure tomcat-users.xml
+      blockinfile:
+        path: "{{ tomcat_install_dir }}/apache-tomcat-{{ tomcat_version }}/conf/tomcat-users.xml"
+        block: |
+          <role rolename="manager-gui"/>
+          <role rolename="admin-gui"/>
+          <user username="{{ tomcat_user }}" password="{{ tomcat_password }}" roles="manager-gui,admin-gui"/>
+        backup: yes
+
+    # 8. Comment RemoteAddrValve in manager context.xml
+    - name: Disable access restriction in manager context.xml
+      replace:
+        path: "{{ tomcat_install_dir }}/apache-tomcat-{{ tomcat_version }}/webapps/manager/META-INF/context.xml"
+        regexp: '(<Valve className="org.apache.catalina.valves.RemoteAddrValve".*?/>)'
+        replace: '<!-- \1 -->'
+
+    # 9. Comment RemoteAddrValve in host-manager context.xml
+    - name: Disable access restriction in host-manager context.xml
+      replace:
+        path: "{{ tomcat_install_dir }}/apache-tomcat-{{ tomcat_version }}/webapps/host-manager/META-INF/context.xml"
+        regexp: '(<Valve className="org.apache.catalina.valves.RemoteAddrValve".*?/>)'
+        replace: '<!-- \1 -->'
+
+    # 10. Create systemd service for Tomcat
+    - name: Create Tomcat systemd service
+      copy:
+        dest: /etc/systemd/system/tomcat.service
+        content: |
+          [Unit]
+          Description=Apache Tomcat 9.0.65
+          After=network.target
+
+          [Service]
+          Type=forking
+          User=ec2-user
+          Group=ec2-user
+          Environment=JAVA_HOME=/usr/lib/jvm/java-17-amazon-corretto
+          Environment=CATALINA_HOME={{ tomcat_install_dir }}/apache-tomcat-{{ tomcat_version }}
+          ExecStart={{ tomcat_install_dir }}/apache-tomcat-{{ tomcat_version }}/bin/startup.sh
+          ExecStop={{ tomcat_install_dir }}/apache-tomcat-{{ tomcat_version }}/bin/shutdown.sh
+          Restart=always
+
+          [Install]
+          WantedBy=multi-user.target
+
+    # 11. Reload systemd daemon
+    - name: Reload systemd
+      systemd:
+        daemon_reload: yes
+
+    # 12. Start and enable Tomcat
+    - name: Start and enable Tomcat service
+      systemd:
+        name: tomcat
+        state: started
+        enabled: yes
+
+    # 13. Verify Tomcat running
+    - name: Check Tomcat process
+      shell: "ps aux | grep '[t]omcat'"
+      register: tomcat_status
+
+    - debug:
+        msg: "Tomcat is running: {{ tomcat_status.stdout }}"
