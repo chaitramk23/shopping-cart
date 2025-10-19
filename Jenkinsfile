@@ -4,7 +4,7 @@ agent any
 stages {
     stage('Checkout') {
         steps {
-            git branch: 'master', 'url: https://github.com/chaitramk23/shopping-cart.git'
+            git branch: 'master', url: 'https://github.com/chaitramk23/shopping-cart.git'
         }
     }
 
