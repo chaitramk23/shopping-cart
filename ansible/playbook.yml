@@ -5,7 +5,7 @@
   vars:
     tomcat_version: "9.0.65"
     tomcat_install_dir: "/opt"
-    tomcat_user: "admin"
+    tomcat_user: "ec2-user"
     tomcat_password: "admin1234"
 
   tasks:
@@ -28,13 +28,13 @@
         state: absent
       ignore_errors: yes
 
-    # 4. Download Tomcat 9.0.65
-    - name: Download Tomcat 9.0.65
+    # 4. Download Tomcat
+    - name: Download Tomcat
       get_url:
         url: "https://archive.apache.org/dist/tomcat/tomcat-9/v{{ tomcat_version }}/bin/apache-tomcat-{{ tomcat_version }}.tar.gz"
         dest: "/tmp/apache-tomcat-{{ tomcat_version }}.tar.gz"
 
-    # 5. Extract Tomcat archive
+    # 5. Extract Tomcat
     - name: Extract Tomcat
       unarchive:
         src: "/tmp/apache-tomcat-{{ tomcat_version }}.tar.gz"
@@ -45,9 +45,16 @@
     - name: Set Tomcat directory permissions
       file:
         path: "{{ tomcat_install_dir }}/apache-tomcat-{{ tomcat_version }}"
-        owner: ec2-user
-        group: ec2-user
+        owner: "{{ tomcat_user }}"
+        group: "{{ tomcat_user }}"
         recurse: yes
+
+    # 6b. Ensure scripts are executable
+    - name: Make Tomcat scripts executable
+      file:
+        path: "{{ tomcat_install_dir }}/apache-tomcat-{{ tomcat_version }}/bin"
+        recurse: yes
+        mode: "0755"
 
     # 7. Configure tomcat-users.xml
     - name: Configure tomcat-users.xml
@@ -59,21 +66,20 @@
           <user username="{{ tomcat_user }}" password="{{ tomcat_password }}" roles="manager-gui,admin-gui"/>
         backup: yes
 
-    # 8. Comment RemoteAddrValve in manager context.xml
+    # 8. Disable RemoteAddrValve
     - name: Disable access restriction in manager context.xml
       replace:
         path: "{{ tomcat_install_dir }}/apache-tomcat-{{ tomcat_version }}/webapps/manager/META-INF/context.xml"
         regexp: '(<Valve className="org.apache.catalina.valves.RemoteAddrValve".*?/>)'
         replace: '<!-- \1 -->'
 
-    # 9. Comment RemoteAddrValve in host-manager context.xml
     - name: Disable access restriction in host-manager context.xml
       replace:
         path: "{{ tomcat_install_dir }}/apache-tomcat-{{ tomcat_version }}/webapps/host-manager/META-INF/context.xml"
         regexp: '(<Valve className="org.apache.catalina.valves.RemoteAddrValve".*?/>)'
         replace: '<!-- \1 -->'
 
-    # 10. Create systemd service for Tomcat
+    # 9. Create systemd service
     - name: Create Tomcat systemd service
       copy:
         dest: /etc/systemd/system/tomcat.service
@@ -84,30 +90,30 @@
 
           [Service]
           Type=forking
-          User=ec2-user
-          Group=ec2-user
+          User={{ tomcat_user }}
+          Group={{ tomcat_user }}
           Environment=JAVA_HOME=/usr/lib/jvm/java-17-amazon-corretto
           Environment=CATALINA_HOME={{ tomcat_install_dir }}/apache-tomcat-{{ tomcat_version }}
-          ExecStart={{ tomcat_install_dir }}/apache-tomcat-{{ tomcat_version }}/bin/catalina.sh run
+          ExecStart={{ tomcat_install_dir }}/apache-tomcat-{{ tomcat_version }}/bin/startup.sh
           ExecStop={{ tomcat_install_dir }}/apache-tomcat-{{ tomcat_version }}/bin/shutdown.sh
           Restart=always
 
           [Install]
           WantedBy=multi-user.target
 
-    # 11. Reload systemd daemon
+    # 10. Reload systemd
     - name: Reload systemd
       systemd:
         daemon_reload: yes
 
-    # 12. Start and enable Tomcat
+    # 11. Start and enable Tomcat
     - name: Start and enable Tomcat service
       systemd:
         name: tomcat
         state: started
         enabled: yes
 
-    # 13. Verify Tomcat running
+    # 12. Verify Tomcat running
     - name: Check Tomcat process
       shell: "ps aux | grep '[t]omcat'"
       register: tomcat_status
