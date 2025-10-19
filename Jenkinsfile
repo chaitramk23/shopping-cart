@@ -30,7 +30,7 @@ pipeline {
 
     stage('Terraform Init & Plan') {
       steps {
-        dir("${INFRA_DIR}") {
+        dir('terraform-infra') {
           withCredentials([
             string(credentialsId: 'AWS_ACCESS_KEY_ID', variable: 'AWS_ACCESS_KEY_ID'),
             string(credentialsId: 'AWS_SECRET_ACCESS_KEY', variable: 'AWS_SECRET_ACCESS_KEY')
@@ -48,7 +48,7 @@ pipeline {
 
     stage('Terraform Apply') {
       steps {
-        dir("${INFRA_DIR}") {
+        dir('terraform-infra') {
           withCredentials([
             string(credentialsId: 'AWS_ACCESS_KEY_ID', variable: 'AWS_ACCESS_KEY_ID'),
             string(credentialsId: 'AWS_SECRET_ACCESS_KEY', variable: 'AWS_SECRET_ACCESS_KEY')
@@ -65,7 +65,7 @@ pipeline {
 
     stage('Prepare Ansible Inventory & Key') {
       steps {
-        dir("${INFRA_DIR}") {
+        dir('terraform-infra') {
           // get the instance IP and ensure the key file exists in infra/
           sh '''
             INSTANCE_IP=$(terraform output -raw instance_public_ip)
