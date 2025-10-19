@@ -74,9 +74,7 @@ stages {
                     chmod 400 ./jenkins_key.pem
                     echo "[INFO] Running Ansible playbook..."
                     export ANSIBLE_HOST_KEY_CHECKING=False
-                    ansible-playbook -i inventory.ini playbook.yml --private-key=./jenkins_key.pem
-                    echo "[INFO] Cleaning up temporary key..."
-                    rm -f ./jenkins_key_temp.pem
+                    ansible-playbook -i inventory.ini playbook.yml --private-key=jenkins_key.pem
                 '''
             }
         }
