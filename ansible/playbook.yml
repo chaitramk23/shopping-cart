@@ -88,7 +88,7 @@
           Group=ec2-user
           Environment=JAVA_HOME=/usr/lib/jvm/java-17-amazon-corretto
           Environment=CATALINA_HOME={{ tomcat_install_dir }}/apache-tomcat-{{ tomcat_version }}
-          ExecStart={{ tomcat_install_dir }}/apache-tomcat-{{ tomcat_version }}/bin/startup.sh
+          ExecStart={{ tomcat_install_dir }}/apache-tomcat-{{ tomcat_version }}/bin/catalina.sh run
           ExecStop={{ tomcat_install_dir }}/apache-tomcat-{{ tomcat_version }}/bin/shutdown.sh
           Restart=always
 
