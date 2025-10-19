@@ -1,18 +1,35 @@
 provider "aws" {
-  region = "us-east-1"
+  region = "us-east-1"  # Change to your region
 }
 
-# Use existing key pair
-variable "key_name" {
-  default = "jenkins-deploy-key"  # your existing key pair name
+# Security Group to allow SSH and HTTP (or Tomcat)
+resource "aws_security_group" "sg" {
+  name        = "tomcat-sg"
+  description = "Allow SSH and HTTP/Tomcat ports"
+
+  ingress {
+    from_port   = 22
+    to_port     = 22
+    protocol    = "tcp"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+
+  ingress {
+    from_port   = 8080
+    to_port     = 8080
+    protocol    = "tcp"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+
+  egress {
+    from_port   = 0
+    to_port     = 0
+    protocol    = "-1"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
 }
 
-# Use existing security group
-variable "sg_id" {
-  default = "sg-0dd5166fbf1ff8a90"  # replace with your existing SG ID
-}
-
-# Get the latest Amazon Linux 2 AMI
+# Get latest Amazon Linux 2 AMI
 data "aws_ami" "amazon_linux" {
   most_recent = true
   owners      = ["amazon"]
@@ -23,19 +40,19 @@ data "aws_ami" "amazon_linux" {
   }
 }
 
-# Create EC2 instance
+# EC2 instance
 resource "aws_instance" "app" {
   ami                    = data.aws_ami.amazon_linux.id
   instance_type          = "t2.micro"
-  key_name               = var.key_name
-  vpc_security_group_ids = [var.sg_id]
+  key_name               = "my-jenkins"  # <-- Replace with your key name in AWS
+  vpc_security_group_ids = [aws_security_group.sg.id]
 
   tags = {
-    Name = "simple-tomcat"
+    Name = "simple-ec2"
   }
 }
 
-# Output the public IP
+# Output the public IP to SSH
 output "instance_ip" {
   value = aws_instance.app.public_ip
 }
