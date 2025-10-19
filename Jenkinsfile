@@ -1,10 +1,12 @@
 pipeline {
     agent any
+
     environment {
-        // AWS credentials as Secret Text in Jenkins
+        // AWS credentials stored in Jenkins as Secret Text
         AWS_ACCESS_KEY_ID     = credentials('AWS_ACCESS_KEY_ID')
         AWS_SECRET_ACCESS_KEY = credentials('AWS_SECRET_ACCESS_KEY')
     }
+
     stages {
         stage('Checkout') {
             steps {
@@ -15,7 +17,7 @@ pipeline {
         stage('Build Java App') {
             steps {
                 echo "Building Java app with Maven..."
-                sh 'mvn clean package -DskipTests'
+                sh 'set -e; mvn clean package -DskipTests'
             }
             post {
                 success {
@@ -27,13 +29,16 @@ pipeline {
         stage('Terraform Init & Plan') {
             steps {
                 dir('terraform-infra') {
-                    sh '''
-                        set -e
-                        export AWS_ACCESS_KEY_ID=${AWS_ACCESS_KEY_ID}
-                        export AWS_SECRET_ACCESS_KEY=${AWS_SECRET_ACCESS_KEY}
-                        terraform init -input=false
-                        terraform plan -out=tfplan
-                    '''
+                    withEnv([
+                        "AWS_ACCESS_KEY_ID=${AWS_ACCESS_KEY_ID}",
+                        "AWS_SECRET_ACCESS_KEY=${AWS_SECRET_ACCESS_KEY}"
+                    ]) {
+                        sh '''
+                            set -e
+                            terraform init -input=false
+                            terraform plan -out=tfplan
+                        '''
+                    }
                 }
             }
         }
@@ -41,12 +46,15 @@ pipeline {
         stage('Terraform Apply') {
             steps {
                 dir('terraform-infra') {
-                    sh '''
-                        set -e
-                        export AWS_ACCESS_KEY_ID=${AWS_ACCESS_KEY_ID}
-                        export AWS_SECRET_ACCESS_KEY=${AWS_SECRET_ACCESS_KEY}
-                        terraform apply -input=false -auto-approve tfplan
-                    '''
+                    withEnv([
+                        "AWS_ACCESS_KEY_ID=${AWS_ACCESS_KEY_ID}",
+                        "AWS_SECRET_ACCESS_KEY=${AWS_SECRET_ACCESS_KEY}"
+                    ]) {
+                        sh '''
+                            set -e
+                            terraform apply -input=false -auto-approve tfplan
+                        '''
+                    }
                 }
             }
         }
