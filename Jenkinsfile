@@ -2,7 +2,7 @@ pipeline {
   agent any
 
   environment {
-    INFRA_DIR = 'infra'
+    INFRA_DIR = 'terraform-infra'
     ANSIBLE_DIR = 'ansible'
     APP_DIR = '.'           // root where pom.xml exists
     TF_VAR_env = 'dev'
